@@ -1,43 +1,95 @@
+import java.util.Scanner;
+
 public class Main {
-
     public static void main(String[] args) {
-        // Я не уверен, что без этого метода нельзя обойтись, но с ним появляется кнопка Run Main.java
-        // Всё, что нужно для проверки работы calc - вызвать его в этом методе
+        Scanner scanner = new Scanner(System.in);
 
+        System.out.println("Выберите режим:");
+        System.out.println("1) Тестовые выражения");
+        System.out.println("2) Ручной ввод");
+        System.out.print("Ваш выбор: ");
+        String mode = scanner.nextLine();
+
+        switch (mode) {
+            case "1":
+                String[] testExpressions = {
+                        "1 + 2",
+                        "10 - 5",
+                        "10 * 5",
+                        "4 / 2",
+                        "a + b",
+                        "1.2 + 5,1",
+                        "Hello World",
+                        "10 / 0",
+                        "0 + 10",
+                        "Можно даже пробелов сколько угодно вставить.",
+                        "     1       *          5   ",
+                        "2 2 * 6",
+                        "2 * 6   2",
+                        "+1",
+                        "2+",
+                        "11 / 1",
+                        "8 + 8 + 8"
+                };
+
+                for (String expr : testExpressions) {
+                    try {
+                        String result = calc(expr);
+                        System.out.println("Математическое выражение: " + expr + " Результат: " + result);
+                    } catch (Exception e) {
+                        System.out.println("Математическое выражение: " + expr + " Ошибка: " + e.getMessage());
+                    }
+                }
+                break;
+            case "2":
+                System.out.print("Математическое выражение: ");
+                String input = scanner.nextLine();
+
+                try {
+                    String result = calc(input);
+                    System.out.println("Результат: " + result);
+                } catch (Exception e) {
+                    System.err.println("Ошибка: " + e.getMessage());
+                }
+                break;
+            default:
+                System.err.println("Ошибка: неверный выбор режима");
+                break;
+        }
     }
 
-    public static String calc(String input){
+    public static String calc(String input) {
         String inputString = input.trim();
-        int operatorMark = -1;                              // Позиция операнда в изначальной строке
-        char operator = 0;                                  // Оператор
-        int operand1;                                       // Первый операнд
-        int operand2;                                       // Второй операнд
+        int operatorMark = -1;
+        char operator = 0;
+        int operand1;
+        int operand2;
 
-        //Проверка на всякий мусор
+        // Проверка на недопустимые символы
         for (int i = 0; i < inputString.length(); i++) {
             char c = inputString.charAt(i);
             if (!(Character.isDigit(c) || c == '+' || c == '-' || c == '*' || c == '/' || c == ' ')) {
-                throw new IllegalArgumentException("Обнаружен недопустимый символ: '" + c + "'. Дорогой Юзер, разрешены только цифры, пробелы и операторы +, -, *, /");
+                throw new InvalidInputException("Обнаружен недопустимый символ: '" + c + "'. Разрешены только цифры, пробелы и операторы +, -, *, /");
             }
         }
 
-        //Поиск операнда и его позиции в строке
-        for (int i = 0; i < inputString.length(); i++){
+        // Поиск оператора
+        for (int i = 0; i < inputString.length(); i++) {
             char c = inputString.charAt(i);
-            if (c == '+' || c == '-' || c == '*' || c == '/'){
-                if (operatorMark != -1){
-                    throw new IllegalArgumentException("Калькулятор может выполнять вычисления только с двумя операндами и одним оператором");
+            if (c == '+' || c == '-' || c == '*' || c == '/') {
+                if (operatorMark != -1) {
+                    throw new InvalidExpressionException("Калькулятор может выполнять вычисления только с двумя операндами и одним оператором. Обнаружено несколько операторов: '" + operator + "' и '" + c + "'");
                 }
                 operatorMark = i;
                 operator = c;
             }
         }
-        //Эксепшн, если нет оператора +; -; *; /
-        if (operatorMark == -1){
-            throw new IllegalArgumentException("Уважаемый Юзер, введите пожалуйста корректное математическое выражение. Калькулятор поддерживает сложение, вычитание, умножение, а также деление.");
+
+        if (operatorMark == -1) {
+            throw new InvalidExpressionException("Введите пожалуйста корректное математическое выражение. Калькулятор поддерживает сложение, вычитание, умножение, а также деление.");
         }
 
-        //Поскакали в обратную сторону искать первый операнд
+        // Извлечение первого операнда
         String temp = "";
         boolean numberStarted = false;
         for (int i = operatorMark - 1; i >= 0; i--) {
@@ -47,22 +99,24 @@ public class Main {
                 numberStarted = true;
             } else if (c == ' ') {
                 if (numberStarted) {
-                    throw new IllegalArgumentException("А как программа должна понимать такой операнд? Она не кушает такие невкусные строки");
+                    throw new InvalidExpressionException("Пробел между числами");
                 }
             } else {
                 break;
             }
         }
+
+        if (temp.isEmpty()) {
+            throw new InvalidExpressionException("Нет первого операнда");
+        }
         operand1 = Integer.parseInt(temp);
-        temp = "";              //Обнулили
-        numberStarted = false;  //Это тоже
-        if (operand1 < 1 || operand1 > 10){
-            throw new IllegalArgumentException("Операнды (числа) должны быть от 1 до 10 включительно, дорогой Юзер");
+        if (operand1 < 1 || operand1 > 10) {
+            throw new NumberOutOfRangeException("Операнды (числа) должны быть от 1 до 10 включительно. Твой первый операнд: " + operand1);
         }
 
-
-
-        //А теперь направо, будем искать второй операнд
+        // Извлечение второго операнда
+        temp = "";
+        numberStarted = false;
         for (int i = operatorMark + 1; i < inputString.length(); i++) {
             char c = inputString.charAt(i);
             if (Character.isDigit(c)) {
@@ -70,25 +124,47 @@ public class Main {
                 numberStarted = true;
             } else if (c == ' ') {
                 if (numberStarted) {
-                    throw new IllegalArgumentException("А как программа должна понимать такой операнд? Она не кушает такие невкусные строки");
+                    throw new InvalidExpressionException("Пробел между числами");
                 }
             } else {
                 break;
             }
         }
+
+        if (temp.isEmpty()) {
+            throw new InvalidExpressionException("Нет второго операнда");
+        }
         operand2 = Integer.parseInt(temp);
-        if (operand2 < 1 || operand2 > 10){
-            throw new IllegalArgumentException("Операнды (числа) должны быть от 1 до 10 включительно, дорогой Юзер");
+        if (operand2 < 1 || operand2 > 10) {
+            throw new NumberOutOfRangeException("Операнды (числа) должны быть от 1 до 10 включительно. Твой второй операнд: " + operand2);
         }
 
-        //Долгожданный результат
-        String answer = "";
-        switch (operator){
-            case '+' -> answer += operand1 + operand2;
-            case '-' -> answer += operand1 - operand2;
-            case '*' -> answer += operand1 * operand2;
-            case '/' -> answer += operand1 / operand2;
+        // Вычисление результата
+        return switch (operator) {
+            case '+' -> String.valueOf(operand1 + operand2);
+            case '-' -> String.valueOf(operand1 - operand2);
+            case '*' -> String.valueOf(operand1 * operand2);
+            case '/' -> String.valueOf(operand1 / operand2);
+            default -> throw new IllegalStateException("Неожиданный оператор: " + operator);
+        };
+    }
+
+    // Пользовательские исключения
+    static class InvalidInputException extends RuntimeException {
+        public InvalidInputException(String message) {
+            super(message);
         }
-        return answer;
+    }
+
+    static class InvalidExpressionException extends RuntimeException {
+        public InvalidExpressionException(String message) {
+            super(message);
+        }
+    }
+
+    static class NumberOutOfRangeException extends RuntimeException {
+        public NumberOutOfRangeException(String message) {
+            super(message);
+        }
     }
 }
